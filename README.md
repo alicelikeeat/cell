@@ -25,3 +25,11 @@ xcodebuild -project CellSheet.xcodeproj -scheme CellSheet -sdk iphonesimulator -
 - `docs/Phase01.md`：架构边界、子任务交付与验收记录。
 
 本次执行环境为 Linux，未安装 Swift、Xcode 或 iOS SDK，未执行 Swift 单元测试或 iOS 编译。CI 配置已建立，尚无通过结果。macOS 待验证清单见阶段记录。
+
+## 未签名 IPA
+
+GitHub Actions 在测试、模拟器编译通过后，以 Release / iphoneos / arm64 禁用签名构建真机 App，再打包 `Payload/CellSheet.app` 为 `CellSheet-unsigned.ipa`。
+
+在仓库 Actions → 最新成功运行 → Artifacts 下载 `CellSheet-unsigned-ipa`，解压下载包即可得到 IPA 和 SHA-256 校验文件。也可在工作流页面通过 Run workflow 手动触发。产物保留 14 天。
+
+未签名 IPA 不能直接安装到普通 iPhone / iPad，也不能直接用于 TestFlight 或 App Store；需要使用适当的证书和描述文件重新签名。此构建流程不需要在 CI 配置签名证书。尚未确认实际构建成功时，不代表已有可下载 IPA。
