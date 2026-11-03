@@ -1,5 +1,10 @@
-name: Phase 01 checks
-on: [push, pull_request]
+name: Phase 01 checks and unsigned IPA
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   build:
     runs-on: macos-15
@@ -9,3 +14,34 @@ jobs:
         run: swift test
       - name: Build iOS simulator app
         run: xcodebuild -project CellSheet.xcodeproj -scheme CellSheet -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+      - name: Build unsigned iOS device app
+        run: |
+          xcodebuild -project CellSheet.xcodeproj -scheme CellSheet -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/Device CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+      - name: Package unsigned IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="build/Device/Build/Products/Release-iphoneos/CellSheet.app"
+          test -f "$APP/CellSheet"
+          test -f "$APP/Info.plist"
+          file "$APP/CellSheet"
+          xcrun lipo -verify_arch arm64 "$APP/CellSheet"
+          if codesign --verify "$APP" 2>/dev/null; then
+            echo "Expected an unsigned app, but found a signed app."
+            exit 1
+          fi
+          mkdir -p build/ipa/Payload
+          ditto "$APP" build/ipa/Payload/CellSheet.app
+          cd build/ipa
+          /usr/bin/zip -qry CellSheet-unsigned.ipa Payload
+          unzip -t CellSheet-unsigned.ipa
+          shasum -a 256 CellSheet-unsigned.ipa > CellSheet-unsigned.ipa.sha256
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: CellSheet-unsigned-ipa
+          path: |
+            build/ipa/CellSheet-unsigned.ipa
+            build/ipa/CellSheet-unsigned.ipa.sha256
+          if-no-files-found: error
+          retention-days: 14
