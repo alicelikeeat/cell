@@ -1,0 +1,11 @@
+name: Phase 01 checks
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Core unit tests
+        run: swift test
+      - name: Build iOS simulator app
+        run: xcodebuild -project CellSheet.xcodeproj -scheme CellSheet -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
